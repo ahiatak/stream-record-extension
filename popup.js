@@ -23,7 +23,7 @@ function updateButtonText() {
     popupStartStopButton.textContent = isRecording ? 'Arrêter l\'Enregistrement' : 'Démarrer l\'Enregistrement';
 }
 
-popupStartStopButton.addEventListener('click', function() {
+/*popupStartStopButton.addEventListener('click', function() {
     if (!isRecording) {
         // Start recording
         const options = { // Gather ALL options from the popup form
@@ -48,6 +48,46 @@ popupStartStopButton.addEventListener('click', function() {
         popupStatus.textContent = ''; // Clear status on stop
     }
     updateButtonText();
+});*/
+
+popupStartStopButton.addEventListener('click', function() {
+    if (!isRecording) {
+        // Start recording
+        chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) { // Get active tab
+            if (tabs && tabs.length > 0) {
+                const activeTab = tabs[0];
+
+                const options = { // Gather ALL options from the popup form
+                    videoSelector: popupVideoSelectorInput.value,
+                    segmentDuration: parseInt(popupSegmentDurationInput.value, 10) * 60 * 1000, // Convert minutes to milliseconds
+                    recordDuration: parseInt(popupRecordDurationInput.value, 10) * 60 * 60 * 1000, // Convert hours to milliseconds
+                    enableSendLocal: popupEnableLocalSaveCheckbox.checked,
+                    enableSendSegmentLocal: popupEnableSegmentLocalSaveCheckbox.checked,
+                    enableTelegramSave: popupEnableTelegramSaveCheckbox.checked,
+                    enableSendSegmentTelegram: popupEnableSegmentTelegramSaveCheckbox.checked,
+                    localServerUrl: popupLocalServerUrlInput.value,
+                    telegramBotToken: popupTelegramBotTokenInput.value,
+                    telegramChatId: popupTelegramChatIdInput.value,
+                    tabId: activeTab.id // Send tabId to background script
+                };
+                sendMessageToBackground('startRecording', options);
+                // isRecording state is updated by background script via updatePopupDisplay message
+
+                popupStatus.textContent = 'Enregistrement en cours...'; // Optional status update
+                updateButtonText();
+            } else {
+                console.warn("Aucun onglet actif trouvé pour démarrer l'enregistrement.");
+                popupStatus.textContent = 'Erreur: Aucun onglet actif.';
+            }
+        });
+
+    } else {
+        // Stop recording
+        sendMessageToBackground('stopRecording');
+        // isRecording state is updated by background script via updatePopupDisplay message
+        popupStatus.textContent = ''; // Clear status on stop
+        updateButtonText();
+    }
 });
 
 /**
@@ -121,7 +161,21 @@ function savePopupOptions() {
 // --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', function() {
     loadPopupOptions(); // Load options when popup is opened
+
+    // Request recording state from background script on popup load
+    chrome.runtime.sendMessage({ action: "getRecordingState" }, function(response) {
+        if (response && response.isRecording !== undefined) {
+            isRecording = response.isRecording; // Update popup's isRecording from background state
+            updateButtonText(); // Update button text based on background recording state
+            if (isRecording) { // Restore status text if recording was ongoing
+                popupStatus.textContent = 'Enregistrement en cours...';
+            }
+        }
+    });
 });
+
+// Save options when any input value changes in the popup form
+popupOptionsForm.addEventListener('change', savePopupOptions); // Save all options on form change
 
 // Save options when any input value changes in the popup form
 popupVideoSelectorInput.addEventListener('change', savePopupOptions);
@@ -138,3 +192,19 @@ popupTelegramChatIdInput.addEventListener('change', savePopupOptions);
 
 // Initialize button text on popup load
 updateButtonText();
+
+
+/**
+ * Function called by background script to update the popup display based on recording state.
+ * This function is called from background.js's updatePopupUI function.
+ * @param {boolean} recordingActive - The current recording state from background script.
+ */
+function updatePopupDisplay(recordingActive) {
+    isRecording = recordingActive; // Update popup's local isRecording to match background state
+    updateButtonText(); // Update button text to reflect new state
+    if (isRecording) {
+        popupStatus.textContent = 'Enregistrement en cours...'; // Restore status text if recording started elsewhere
+    } else {
+        popupStatus.textContent = ''; // Clear status text if recording stopped elsewhere
+    }
+}

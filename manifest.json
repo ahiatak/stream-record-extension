@@ -1,0 +1,62 @@
+{
+    "manifest_version": 3,
+    "name": "Stream Recorder Extension",
+    "version": "1.0.0",
+    "description": "Extension pour enregistrer le stream vidéo d'une page web.",
+    "__comment": "Les commentaires ont été déplacés vers des champs __comment afin de rester conforme au standard JSON.",
+    "permissions": [
+        "activeTab",
+        "tabs",
+        "webNavigation",
+        "webNavigation.getAllFrames",
+        "webRequest",
+        "webRequestBlocking",
+        "storage",
+        "downloads",
+        "scripting",
+        "storage",
+        "notifications",
+        "<all_urls>",
+        "declarativeContent",
+        "contextMenus",
+        "identity",
+        "identity.email",
+        "identity.launchWebAuthFlow",
+        "identity.getAuthToken",
+        "identity.getProfileUserInfo",
+        "identity.getAccounts",
+        "identity.removeCachedAuthToken",
+        "identity.getRedirectURL"
+    ],
+    "__comment_permissions": "Optionnel: pour ajouter des notifications, ajouter 'notifications'. Pour la permission '<all_urls>', il est conseillé d'utiliser des permissions plus spécifiques (ex: utiliser 'matches' avec des domaines précis).",
+    "background": {
+      "service_worker": "background.js",
+      "type": "module",
+      "__comment_background": "Utiliser un Service Worker (recommandé pour Chrome et Firefox Manifest V3). Alternative : utiliser un script de fond classique avec 'scripts' et 'persistent' pour une compatibilité avec des versions plus anciennes."
+    },
+    "content_scripts": [
+      {
+        "matches": ["<all_urls>"],
+        "js": ["content.js"],
+        "all_frames": true
+      }
+    ],
+    "options_page": "options.html",
+    "__comment_options": "Alternative pour Chrome : utiliser 'options_ui' pour plus de modernité et de flexibilité.",
+    "action": {
+      "default_popup": "popup.html",
+      "default_title": "Stream Recorder",
+      "default_icon": {
+        "16": "icons/icon16.png",
+        "48": "icons/icon48.png",
+        "128": "icons/icon128.png"
+      }
+    },
+    "__comment_alternative": "Pour Chrome Manifest V2 (déprécié), il est possible d'utiliser 'browser_action' à la place de 'action'.",
+    "icons": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  }
+  

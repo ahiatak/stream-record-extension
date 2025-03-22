@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Options de l'Extension Stream Recorder</title>
+    <link rel="stylesheet" href="options.css"> <!-- Lien vers le fichier CSS pour le style -->
+</head>
+<body>
+    <div class="options-container">
+        <h1>Options de Stream Recorder</h1>
+        <form id="options-form">
+            <fieldset>
+                <legend>Partie 1: Sélecteur Vidéo</legend>
+                <div class="form-group">
+                    <label for="videoSelector">Sélecteur CSS de la balise vidéo:</label>
+                    <input type="text" id="videoSelector" name="videoSelector" value="video" placeholder="Ex: video, #my-video, .video-class">
+                    <small class="form-text">Sélecteur CSS pour identifier la balise <video> à enregistrer. Par défaut: 'video'.</small>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Partie 2: Durée de l'Enregistrement</legend>
+                <div class="form-group">
+                    <label for="segmentDuration">Durée d'un segment (minutes):</label>
+                    <input type="number" id="segmentDuration" name="segmentDuration" value="5" min="1">
+                    <small class="form-text">Durée de chaque segment vidéo en minutes. Par défaut: 5 minutes.</small>
+                </div>
+                <div class="form-group">
+                    <label for="recordDuration">Durée totale de l'enregistrement (heures):</label>
+                    <input type="number" id="recordDuration" name="recordDuration" value="5" min="1">
+                    <small class="form-text">Durée totale maximale de l'enregistrement en heures. Par défaut: 5 heures.</small>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Partie 3: Options de Sauvegarde</legend>
+                <div class="form-group switch-group">
+                    <label class="switch">
+                        <input type="checkbox" id="enableLocalSave" name="enableLocalSave">
+                        <span class="slider round"></span>
+                    </label>
+                    <label for="enableLocalSave">Activer la sauvegarde vers le serveur local (ENABLE_SEND_LOCAL)</label>
+                </div>
+                <div class="form-group switch-group">
+                    <label class="switch">
+                        <input type="checkbox" id="enableSegmentLocalSave" name="enableSegmentLocalSave">
+                        <span class="slider round"></span>
+                    </label>
+                    <label for="enableSegmentLocalSave">Activer la sauvegarde par segment vers le serveur local (ENABLE_SEND_SEGMENT_LOCAL)</label>
+                </div>
+                <div class="form-group switch-group">
+                    <label class="switch">
+                        <input type="checkbox" id="enableTelegramSave" name="enableTelegramSave">
+                        <span class="slider round"></span>
+                    </label>
+                    <label for="enableTelegramSave">Activer la sauvegarde vers Telegram (ENABLE_SEND_TELEGRAM)</label>
+                </div>
+                <div class="form-group switch-group">
+                    <label class="switch">
+                        <input type="checkbox" id="enableSegmentTelegramSave" name="enableSegmentTelegramSave">
+                        <span class="slider round"></span>
+                    </label>
+                    <label for="enableSegmentTelegramSave">Activer la sauvegarde par segment vers Telegram (ENABLE_SEND_SEGMENT_TELEGRAM)</label>
+                </div>
+                <div class="form-group">
+                    <label for="localServerUrl">URL du serveur local:</label>
+                    <input type="url" id="localServerUrl" name="localServerUrl" placeholder="http://localhost:3000/upload.php" value="http://localhost:3000/upload.php">
+                    <small class="form-text">URL de votre serveur local pour la sauvegarde des vidéos.</small>
+                </div>
+                <div class="form-group">
+                    <label for="telegramBotToken">Telegram Bot Token:</label>
+                    <input type="text" id="telegramBotToken" name="telegramBotToken" placeholder="YOUR_TELEGRAM_BOT_TOKEN">
+                    <small class="form-text">Token de votre bot Telegram (Attention: gardez ce token secret!).</small>
+                </div>
+                <div class="form-group">
+                    <label for="telegramChatId">Telegram Chat ID:</label>
+                    <input type="text" id="telegramChatId" name="telegramChatId" placeholder="YOUR_TELEGRAM_CHAT_ID">
+                    <small class="form-text">ID du chat Telegram où envoyer les vidéos.</small>
+                </div>
+            </fieldset>
+
+            <div class="form-actions">
+                <button type="button" id="startStopButton">Démarrer l'Enregistrement</button>
+            </div>
+        </form>
+    </div>
+    <script src="options.js"></script> <!-- Lien vers le fichier JavaScript pour la logique des options -->
+</body>
+</html>

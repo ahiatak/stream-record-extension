@@ -1,0 +1,182 @@
+/* popup.css */
+
+:root {
+    --primary-color: #007bff;
+    --secondary-color: #6c757d;
+    --background-color: #f8f9fa;
+    --text-color: #343a40;
+    --border-color: #dee2e6;
+    --box-shadow-color: rgba(0, 0, 0, 0.1);
+    --switch-bg-color: #ccc;
+    --switch-active-bg-color: var(--primary-color);
+    --switch-thumb-color: white;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    width: 400px; /* Wider popup to accommodate all options */
+    padding: 15px; /* Slightly more padding */
+}
+
+.popup-container {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px; /* More gap between sections */
+}
+
+h1 {
+    text-align: center;
+    color: var(--primary-color);
+    margin-bottom: 20px;
+    font-size: 1.5rem; /* Larger title for popup */
+}
+
+fieldset {
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    padding: 15px; /* More padding in fieldset */
+    margin-bottom: 15px; /* More margin below fieldset */
+}
+
+legend {
+    font-size: 1.1rem; /* Slightly larger legend */
+    font-weight: bold;
+    color: var(--text-color);
+    padding: 0 10px;
+}
+
+.form-group {
+    margin-bottom: 12px; /* More margin in form-group */
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 0.95rem; /* Slightly larger label */
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group input[type="url"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="number"]:focus,
+.form-group input[type="url"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+.form-text {
+    font-size: 0.85rem; /* Slightly smaller form text */
+    color: var(--secondary-color);
+    display: block;
+    margin-top: 5px;
+}
+
+.form-actions {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.form-actions button {
+    padding: 12px 25px;
+    font-size: 1rem;
+    color: white;
+    background-color: var(--primary-color);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.form-actions button:hover {
+    background-color: #0056b3;
+}
+
+.form-actions button:focus {
+    outline: none;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.7);
+}
+
+/* Style for switches (checkboxes) - Reused from options.css */
+.switch-group {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px; /* Adjusted margin */
+}
+
+.switch-group label:last-child {
+    margin-left: 10px;
+    font-weight: normal;
+    font-size: 0.95rem; /* Slightly larger switch label */
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 45px; /* Adjusted switch width */
+    height: 25px; /* Adjusted switch height */
+    margin-right: 8px; /* Adjusted margin */
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--switch-bg-color);
+    transition: .4s;
+    border-radius: 25px; /* Adjusted border-radius */
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px; /* Adjusted thumb height */
+    width: 18px; /* Adjusted thumb width */
+    left: 4px; /* Adjusted thumb position */
+    bottom: 4px; /* Adjusted thumb position */
+    background-color: var(--switch-thumb-color);
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: var(--switch-active-bg-color);
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px var(--switch-active-bg-color);
+}
+
+input:checked + .slider:before {
+    transform: translateX(20px); /* Adjusted thumb translation */
+}
+
+.slider.round {
+    border-radius: 25px; /* Adjusted border-radius */
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}

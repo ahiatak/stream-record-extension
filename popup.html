@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stream Recorder Popup</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="popup-container">
+        <h1>Options d'Enregistrement</h1>
+        <form id="popup-options-form">
+            <fieldset>
+                <legend>Partie 1: Sélecteur Vidéo</legend>
+                <div class="form-group">
+                    <label for="popupVideoSelector">Sélecteur CSS de la balise vidéo:</label>
+                    <input type="text" id="popupVideoSelector" name="popupVideoSelector" value="video" placeholder="Ex: video, #my-video, .video-class">
+                    <small class="form-text">Sélecteur CSS pour identifier la balise <video> à enregistrer.</small>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Partie 2: Durée de l'Enregistrement</legend>
+                <div class="form-group">
+                    <label for="popupSegmentDuration">Durée d'un segment (minutes):</label>
+                    <input type="number" id="popupSegmentDuration" name="popupSegmentDuration" value="5" min="1">
+                    <small class="form-text">Durée de chaque segment vidéo en minutes.</small>
+                </div>
+                <div class="form-group">
+                    <label for="popupRecordDuration">Durée totale de l'enregistrement (heures):</label>
+                    <input type="number" id="popupRecordDuration" name="popupRecordDuration" value="5" min="1">
+                    <small class="form-text">Durée totale maximale de l'enregistrement en heures.</small>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Partie 3: Options de Sauvegarde</legend>
+                <div class="form-group switch-group">
+                    <label class="switch">
+                        <input type="checkbox" id="popupEnableLocalSave" name="popupEnableLocalSave">
+                        <span class="slider round"></span>
+                    </label>
+                    <label for="popupEnableLocalSave">Activer sauvegarde serveur local (ENABLE_SEND_LOCAL)</label>
+                </div>
+                <div class="form-group switch-group">
+                    <label class="switch">
+                        <input type="checkbox" id="popupEnableSegmentLocalSave" name="popupEnableSegmentLocalSave">
+                        <span class="slider round"></span>
+                    </label>
+                    <label for="popupEnableSegmentLocalSave">Sauvegarde segment serveur local (ENABLE_SEND_SEGMENT_LOCAL)</label>
+                </div>
+                <div class="form-group switch-group">
+                    <label class="switch">
+                        <input type="checkbox" id="popupEnableTelegramSave" name="popupEnableTelegramSave">
+                        <span class="slider round"></span>
+                    </label>
+                    <label for="popupEnableTelegramSave">Activer sauvegarde Telegram (ENABLE_SEND_TELEGRAM)</label>
+                </div>
+                <div class="form-group switch-group">
+                    <label class="switch">
+                        <input type="checkbox" id="popupEnableSegmentTelegramSave" name="popupEnableSegmentTelegramSave">
+                        <span class="slider round"></span>
+                    </label>
+                    <label for="popupEnableSegmentTelegramSave">Sauvegarde segment Telegram (ENABLE_SEND_SEGMENT_TELEGRAM)</label>
+                </div>
+                <div class="form-group">
+                    <label for="popupLocalServerUrl">URL du serveur local:</label>
+                    <input type="url" id="popupLocalServerUrl" name="popupLocalServerUrl" placeholder="http://localhost:3000/upload.php" value="http://localhost:3000/upload.php">
+                    <small class="form-text">URL de votre serveur local pour la sauvegarde des vidéos.</small>
+                </div>
+                <div class="form-group">
+                    <label for="popupTelegramBotToken">Telegram Bot Token:</label>
+                    <input type="text" id="popupTelegramBotToken" name="popupTelegramBotToken" placeholder="YOUR_TELEGRAM_BOT_TOKEN">
+                    <small class="form-text">Token de votre bot Telegram (secret!).</small>
+                </div>
+                <div class="form-group">
+                    <label for="popupTelegramChatId">Telegram Chat ID:</label>
+                    <input type="text" id="popupTelegramChatId" name="popupTelegramChatId" placeholder="YOUR_TELEGRAM_CHAT_ID">
+                    <small class="form-text">ID du chat Telegram où envoyer les vidéos.</small>
+                </div>
+            </fieldset>
+
+            <div class="form-actions">
+                <button type="button" id="popupStartStopButton" class="popup-button">Démarrer l'Enregistrement</button>
+            </div>
+            <div id="popupStatus" class="popup-status"></div>
+        </form>
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>

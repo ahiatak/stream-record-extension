@@ -603,7 +603,7 @@ function contentStartRecording(options) {
         chrome.runtime.sendMessage({action: "contentRecordingStarted"}, function(response) { // <-- Réponse basique
             console.log("Response sent from contentStartRecording", response);
         });
-        
+
         console.log("contentStartRecording appelée avec les options:", options);
         // 1. Configure global variables using options received from background script
         videoSelector = options.videoSelector;
@@ -654,7 +654,7 @@ function contentStopRecording() {
 
 // --- Message Listener in content.js ---
 chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
-    console.log("Message reçu dans le script de contenu:", message, sender);
+    console.log("Message reçu dans le script de contenu content.js:", message, sender);
 
     if (message.action === "contentStartRecording") {
         // Call the internal start recording function (already configured options via contentStartRecording)
@@ -668,6 +668,7 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     // No response needed for these actions in this example
     return false;
 });
+
 
 
 console.log("Script de contenu content.js chargé."); // Confirmation message when content script loads.

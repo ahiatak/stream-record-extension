@@ -1,5 +1,6 @@
 /* popup.js */
 
+// Sélection des éléments du popup
 const popupStartStopButton = document.getElementById('popupStartStopButton');
 const popupStartButton = document.getElementById('popupStartButton');
 const popupStopButton = document.getElementById('popupStopButton');
@@ -18,53 +19,70 @@ const popupLocalServerUrlInput = document.getElementById('popupLocalServerUrl');
 const popupTelegramBotTokenInput = document.getElementById('popupTelegramBotToken');
 const popupTelegramChatIdInput = document.getElementById('popupTelegramChatId');
 
-
-let isRecording = false; // Track recording state in popup
-
-function updateButtonText() {
+/**
+ * Met à jour le texte du bouton en fonction de l'état de l'enregistrement.
+ * @param {boolean} isRecording - L'état d'enregistrement actuel.
+ */
+function updateButtonText(isRecording) {
     popupStartStopButton.textContent = isRecording ? 'Arrêter l\'Enregistrement' : 'Démarrer l\'Enregistrement';
 }
 
+/**
+ * Envoie un message au content script de l'onglet actif.
+ * @param {string} action - L'action à envoyer ('startRecording', 'stopRecording', 'getRecordingState').
+ * @param {object} options - Données optionnelles à envoyer avec le message.
+ * @param {function} callback - Fonction à exécuter à la réception de la réponse.
+ */
+function sendMessageToActiveTab(action, options, callback) {
+    chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+        if (tabs.length) {
+            chrome.tabs.sendMessage(tabs[0].id, { action: action, options: options }, function(response) {
+                if (chrome.runtime.lastError) {
+                    console.error("Erreur lors de l'envoi du message au content script:", chrome.runtime.lastError);
+                    popupStatus.textContent = 'Erreur de communication.';
+                } else {
+                    console.log("Message envoyé:", action, response);
+                    if (callback) callback(response);
+                }
+            });
+        }
+    });
+}
 
+// Gestion du clic sur le bouton start/stop
 popupStartStopButton.addEventListener('click', function() {
-    if (!isRecording) {
-        // Start recording
-        startRecording();
-    } else {
-        // Stop recording
-        sendMessageToBackground('stopRecording');
-        isRecording = false;
-        popupStatus.textContent = ''; // Clear status on stop
-    }
-    updateButtonText();
+    // Demande l'état actuel de l'enregistrement dans l'onglet actif
+    sendMessageToActiveTab("getRecordingState", null, function(response) {
+        if (response && response.isRecording) {
+            // Si enregistrement en cours, envoyer la commande d'arrêt
+            sendMessageToActiveTab('stopRecording');
+            updateButtonText(false);
+            popupStatus.textContent = '';
+        } else {
+            // Sinon, démarrer l'enregistrement
+            startRecording();
+        }
+    });
 });
-
 
 popupStartButton.addEventListener('click', function() {
-    if (!isRecording) {
-        // Start recording
-        startRecording();
-    } 
-    updateButtonText();
+    startRecording();
 });
-
 
 popupStopButton.addEventListener('click', function() {
-    if (isRecording) {
-        // Stop recording
-        stopRecording();
-    }
-    console.log('console Arrêt de l\'enregistrement');
-    updateButtonText();
+    sendMessageToActiveTab('stopRecording');
+    console.log('Arrêt de l\'enregistrement');
+    updateButtonText(false);
 });
 
-
+/**
+ * Démarre l'enregistrement en récupérant les options depuis le popup.
+ */
 function startRecording() {
-    
-    const options = { // Gather ALL options from the popup form
+    const options = {
         videoSelector: popupVideoSelectorInput.value,
-        segmentDuration: parseInt(popupSegmentDurationInput.value, 10) * 60 * 1000, // Convert minutes to milliseconds
-        recordDuration: parseInt(popupRecordDurationInput.value, 10) * 60 * 60 * 1000, // Convert hours to milliseconds
+        segmentDuration: parseInt(popupSegmentDurationInput.value, 10) * 60 * 1000, // minutes -> millisecondes
+        recordDuration: parseInt(popupRecordDurationInput.value, 10) * 60 * 60 * 1000, // heures -> millisecondes
         enableSendLocal: popupEnableLocalSaveCheckbox.checked,
         enableSendSegmentLocal: popupEnableSegmentLocalSaveCheckbox.checked,
         enableTelegramSave: popupEnableTelegramSaveCheckbox.checked,
@@ -73,42 +91,17 @@ function startRecording() {
         telegramBotToken: popupTelegramBotTokenInput.value,
         telegramChatId: popupTelegramChatIdInput.value
     };
-    sendMessageToBackground('startRecording', options);
-    isRecording = true;
-    popupStatus.textContent = 'Enregistrement en cours...'; // Optional status update
-}
-
-
-function stopRecording() {
-    sendMessageToBackground('stopRecording');
-    isRecording = false;
-    popupStatus.textContent = ''; // Clear status on stop
-    updateButtonText();
-}
-
-/**
- * Sends a message to the background script.
- * @param {string} action - The action to send (e.g., 'startRecording', 'stopRecording').
- * @param {object} options - Optional data to send with the message (for startRecording with popup options).
- */
-function sendMessageToBackground(action, options) {
-    chrome.runtime.sendMessage({ action: action, options: options }, function(response) {
-        if (chrome.runtime.lastError) {
-            console.error("Erreur lors de l'envoi du message au background script:", chrome.runtime.lastError);
-            popupStatus.textContent = 'Erreur de communication.'; // Update status on error
-        } else {
-            console.log("Message envoyé au background script:", action, response ? response : '', response);
-            // Handle response from background script if needed
-        }
+    sendMessageToActiveTab('startRecording', options, function(response) {
+        updateButtonText(true);
+        popupStatus.textContent = 'Enregistrement en cours...';
     });
 }
 
-
 /**
- * Loads options from chrome.storage.sync and populates the popup form fields.
+ * Charge les options depuis chrome.storage.sync et les affecte aux champs du popup.
  */
 function loadPopupOptions() {
-    chrome.storage.sync.get({ // Get ALL options, same as in options.js
+    chrome.storage.sync.get({
         videoSelector: 'video',
         segmentDuration: 5,
         recordDuration: 5,
@@ -134,10 +127,10 @@ function loadPopupOptions() {
 }
 
 /**
- * Saves popup options to chrome.storage.sync.
+ * Sauvegarde les options du popup dans chrome.storage.sync.
  */
 function savePopupOptions() {
-    chrome.storage.sync.set({ // Save ALL options, same as in options.js
+    chrome.storage.sync.set({
         videoSelector: popupVideoSelectorInput.value,
         segmentDuration: parseInt(popupSegmentDurationInput.value, 10),
         recordDuration: parseInt(popupRecordDurationInput.value, 10),
@@ -153,13 +146,17 @@ function savePopupOptions() {
     });
 }
 
-
 // --- Event Listeners ---
+
 document.addEventListener('DOMContentLoaded', function() {
-    loadPopupOptions(); // Load options when popup is opened
+    loadPopupOptions();
+    // Vérifie l'état de l'enregistrement dans l'onglet actif dès l'ouverture du popup
+    sendMessageToActiveTab("getRecordingState", null, function(response) {
+        updateButtonText(response && response.isRecording);
+    });
 });
 
-// Save options when any input value changes in the popup form
+// Sauvegarder les options dès qu'un champ est modifié
 popupVideoSelectorInput.addEventListener('change', savePopupOptions);
 popupSegmentDurationInput.addEventListener('change', savePopupOptions);
 popupRecordDurationInput.addEventListener('change', savePopupOptions);
@@ -170,22 +167,3 @@ popupEnableSegmentTelegramSaveCheckbox.addEventListener('change', savePopupOptio
 popupLocalServerUrlInput.addEventListener('change', savePopupOptions);
 popupTelegramBotTokenInput.addEventListener('change', savePopupOptions);
 popupTelegramChatIdInput.addEventListener('change', savePopupOptions);
-
-
-// Initialize button text on popup load
-updateButtonText();
-
-
-chrome.runtime.sendMessage({ action: "getRecordingState" }, function(response) {
-    if (response && response.isRecording) {
-        isRecording = response.isRecording;
-        console.log('isRecording', isRecording);
-        // Afficher le bouton "Arrêter l'enregistrement"
-        updateButtonText();
-    } else {
-        isRecording = response.isRecording;
-        console.log('isRecording', isRecording);
-        // Afficher le bouton "Démarrer l'enregistrement"
-        updateButtonText();
-    }
-});

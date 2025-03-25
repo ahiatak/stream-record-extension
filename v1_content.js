@@ -1,19 +1,19 @@
 /* content.js */
 
-// --- Global variables (configurables via options) ---
-let videoSelector = 'video'; // Sélecteur vidéo par défaut, modifiable via options
-let SEGMENT_DURATION = 5 * 60 * 1000; // 5 minutes par segment (par défaut), en millisecondes
-let RECORD_DURATION = 5 * 60 * 60 * 1000; // 5 heures d'enregistrement total (par défaut), en millisecondes
-let ENABLE_SEND_LOCAL = false; // Par défaut, modifiable via options
-let ENABLE_SEND_SEGMENT_LOCAL = false;
-let ENABLE_SEND_TELEGRAM = false;
-let ENABLE_SEND_SEGMENT_TELEGRAM = false;
-let LOCAL_SERVER_URL = "http://localhost:3000/upload.php";
-let TELEGRAM_BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN";
-let TELEGRAM_CHAT_ID = "YOUR_TELEGRAM_CHAT_ID";
+// --- Global variables (configurable via options) ---
+let videoSelector = 'video'; // Default video selector, configurable via options
+let SEGMENT_DURATION = 5 * 60 * 1000; // 5 minutes per segment (default), configurable in milliseconds
+let RECORD_DURATION = 5 * 60 * 60 * 1000; // 5 hours total record time (default), configurable in milliseconds
+let ENABLE_SEND_LOCAL = false; // Default, configurable via options
+let ENABLE_SEND_SEGMENT_LOCAL = false; // Default, configurable via options
+let ENABLE_SEND_TELEGRAM = false; // Default, configurable via options
+let ENABLE_SEND_SEGMENT_TELEGRAM = false; // Default, configurable via options
+let LOCAL_SERVER_URL = "http://localhost:3000/upload.php"; // Default, configurable via options
+let TELEGRAM_BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"; // Default, configurable via options
+let TELEGRAM_CHAT_ID = "YOUR_TELEGRAM_CHAT_ID"; // Default, configurable via options
 
-// --- Global variables (état interne) ---
-let videoElement = null; // Définie par findVideoElement
+// --- Global variables (internal state) ---
+let videoElement = null; // Will be set by `findVideoElement`
 let mediaRecorder;
 let isRecording = false;
 let expectedStop = false;
@@ -24,15 +24,17 @@ let useIndexedDB = false;
 let collectedSegments = [];
 
 /**
- * Recherche l'élément vidéo en fonction du sélecteur configuré.
- * @returns {HTMLVideoElement|null} L'élément vidéo ou null si non trouvé.
+ * [Module 4 Étape 4.1 - Modularization]
+ * Function to find the video element based on the configured selector.
+ * @returns {HTMLVideoElement|null} The video element or null if not found.
  */
 function findVideoElement() {
     return document.querySelector(videoSelector);
 }
 
 /**
- * Autorise les iframes présentes dans le document.
+ * [Module 4 Étape 4.1 - Modularization]
+ * Authorizes iframes within the document.
  */
 function authorizeIframes() {
     const iframes = document.querySelectorAll("iframe");
@@ -58,15 +60,20 @@ function authorizeIframes() {
 }
 
 /**
- * Remplace les iframes par des versions personnalisées pour forcer leur rechargement.
+ * [Module 4 Étape 4.1 - Modularization]
+ * Replaces iframes with custom versions to force reload.
  */
 function replaceIframesWithCustom() {
     const iframes = document.querySelectorAll("iframe");
     iframes.forEach((oldIframe) => {
         const newIframe = document.createElement("iframe");
         newIframe.src = oldIframe.src;
-        if (oldIframe.id) newIframe.id = oldIframe.id;
-        if (oldIframe.className) newIframe.className = oldIframe.className;
+        if (oldIframe.id) {
+            newIframe.id = oldIframe.id;
+        }
+        if (oldIframe.className) {
+            newIframe.className = oldIframe.className;
+        }
         newIframe.setAttribute(
             "sandbox",
             "allow-same-origin allow-scripts allow-popups allow-forms allow-downloads allow-pointer-lock allow-top-navigation"
@@ -92,7 +99,8 @@ function replaceIframesWithCustom() {
 }
 
 /**
- * Initialise le système d'écriture de fichier via File System Access API.
+ * [Module 4 Étape 4.1 - Modularization]
+ * Initializes file writer using File System Access API.
  */
 async function initFileWriter() {
     if (fileWriter || fileSystemRejected) {
@@ -126,7 +134,8 @@ async function initFileWriter() {
 }
 
 /**
- * Initialise ou ouvre IndexedDB.
+ * [Module 4 Étape 4.1 - Modularization]
+ * Initializes or opens IndexedDB.
  */
 function initDB() {
     return new Promise((resolve, reject) => {
@@ -154,8 +163,9 @@ function initDB() {
 }
 
 /**
- * Ajoute un segment dans IndexedDB.
- * @param {Blob} blob - Le segment à ajouter.
+ * [Module 4 Étape 4.1 - Modularization]
+ * Adds a segment to IndexedDB.
+ * @param {Blob} blob - The segment blob to add.
  */
 function addSegment(blob) {
     if (!db) {
@@ -168,8 +178,9 @@ function addSegment(blob) {
 }
 
 /**
- * Récupère tous les segments depuis IndexedDB.
- * @returns {Promise<Blob[]>} Une promesse résolvant avec un tableau de blobs.
+ * [Module 4 Étape 4.1 - Modularization]
+ * Retrieves all segments from IndexedDB.
+ * @returns {Promise<Blob[]>} A promise that resolves with an array of segment blobs.
  */
 function getAllSegments() {
     return new Promise((resolve, reject) => {
@@ -186,7 +197,8 @@ function getAllSegments() {
 }
 
 /**
- * Efface tous les segments stockés dans IndexedDB.
+ * [Module 4 Étape 4.1 - Modularization]
+ * Clears all segments from IndexedDB.
  */
 function clearSegments() {
     if (!db) {
@@ -199,8 +211,9 @@ function clearSegments() {
 }
 
 /**
- * Envoie un segment vidéo au serveur local.
- * @param {Blob} blob - Le segment à envoyer.
+ * [Module 4 Étape 4.1 - Modularization]
+ * Sends a video segment to the local server.
+ * @param {Blob} blob - The segment blob to send.
  */
 async function sendToLocalServer(blob) {
     if (!ENABLE_SEND_LOCAL && !ENABLE_SEND_SEGMENT_LOCAL) return;
@@ -246,8 +259,9 @@ async function sendToLocalServer(blob) {
 }
 
 /**
- * Envoie un segment vidéo via l'API Telegram Bot.
- * @param {Blob} blob - Le segment à envoyer.
+ * [Module 4 Étape 4.1 - Modularization]
+ * Sends a video segment via Telegram Bot API.
+ * @param {Blob} blob - The segment blob to send.
  */
 async function sendToTelegram(blob) {
     if (!ENABLE_SEND_TELEGRAM && !ENABLE_SEND_SEGMENT_TELEGRAM) return;
@@ -304,40 +318,34 @@ async function sendToTelegram(blob) {
 }
 
 /**
- * Démarre l'enregistrement vidéo en découpant le flux en segments.
+ * [Module 4 Étape 4.1 - Modularization]
+ * Starts the video recording, segmenting the stream.
  */
 async function startRecordingFunction() {
-    videoElement = findVideoElement(); // Recherche à chaque démarrage pour gérer les pages dynamiques
+    videoElement = findVideoElement(); // Find video element each time to account for dynamic pages
     if (!videoElement) {
         console.error("Aucun élément vidéo trouvé avec le sélecteur :", videoSelector);
         return;
     }
     if (!videoElement.captureStream) {
-        console.error("La capture du flux vidéo n'est pas supportée par cet élément.");
-        return;
-    }
-
-    // Si un enregistrement est déjà en cours, on ne redémarre pas
-    if (isRecording) {
-        console.warn("Un enregistrement est déjà en cours dans cet onglet.");
+        console.error("La capture du flux vidéo n'est pas supportée par cet élément vidéo.");
         return;
     }
 
     expectedStop = false;
     await initFileWriter();
-    collectedSegments = []; // Réinitialise les segments à chaque démarrage
+    collectedSegments = []; // Reset segments array on each start
 
     try {
         const stream = videoElement.captureStream();
         mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm; codecs=vp9" });
         isRecording = true;
         console.log("Enregistrement démarré...");
-        // Envoi du signal de démarrage après création du MediaRecorder
         chrome.runtime.sendMessage({ action: "contentRecordingStarted" });
 
         mediaRecorder.ondataavailable = async (event) => {
             if (event.data && event.data.size > 0) {
-                collectedSegments.push(event.data); // Stocke le segment pour reconstitution ultérieure
+                collectedSegments.push(event.data); // Store segment for full blob reconstruction
                 if (fileWriter && !useIndexedDB) {
                     try {
                         await fileWriter.write(event.data);
@@ -421,17 +429,15 @@ async function startRecordingFunction() {
                     }
                 }
             } else {
-                // Si l'arrêt n'était pas prévu, on redémarre l'enregistrement
                 if (!expectedStop) {
-                    console.warn("Enregistrement arrêté de manière inattendue, redémarrage...");
+                    console.warn("Enregistrement arrêté de manière inattendue (onstop non volontaire), redémarrage...");
                     restartRecordingFunction();
                 }
             }
-            // On informe le background de l'arrêt
-            chrome.runtime.sendMessage({ action: "contentRecordingStopped" });
         };
 
         mediaRecorder.start(SEGMENT_DURATION);
+
     } catch (error) {
         console.error("Erreur lors du démarrage de l'enregistrement :", error);
         isRecording = false;
@@ -439,7 +445,8 @@ async function startRecordingFunction() {
 }
 
 /**
- * Redémarre l'enregistrement après un délai court.
+ * [Module 4 Étape 4.1 - Modularization]
+ * Restarts recording after a short delay.
  */
 function restartRecordingFunction() {
     setTimeout(() => {
@@ -461,7 +468,8 @@ function restartRecordingFunction() {
 }
 
 /**
- * Arrête l'enregistrement de manière contrôlée.
+ * [Module 4 Étape 4.1 - Modularization]
+ * Stops the recording in a controlled manner.
  */
 async function stopRecordingFunction() {
     if (mediaRecorder && isRecording) {
@@ -474,7 +482,7 @@ async function stopRecordingFunction() {
             isRecording = false;
         } finally {
             isRecording = false;
-            // Le message "contentRecordingStopped" sera envoyé dans onstop
+            chrome.runtime.sendMessage({ action: "contentRecordingStopped" });
         }
     } else {
         console.warn("stopRecording appelé alors qu'aucun enregistrement n'est en cours ou MediaRecorder non initialisé.");
@@ -482,8 +490,9 @@ async function stopRecordingFunction() {
 }
 
 /**
- * Combine les segments en un blob et déclenche le téléchargement.
- * @param {Blob[]} segments - Tableau de blobs segmentés.
+ * [Module 4 Étape 4.1 - Modularization]
+ * Combines segments into a blob and triggers download.
+ * @param {Blob[]} segments - Array of segment blobs.
  */
 function downloadRecording(segments) {
     if (!segments || segments.length === 0) {
@@ -505,7 +514,8 @@ function downloadRecording(segments) {
 }
 
 /**
- * Crée et affiche une barre de progression pour l'upload.
+ * [Module 4 Étape 4.1 - Modularization]
+ * Creates and displays an upload progress bar.
  */
 function createUploadProgressBar() {
     if (document.getElementById("uploadProgressContainer")) return;
@@ -541,7 +551,8 @@ function createUploadProgressBar() {
 }
 
 /**
- * Surveille l'état de la vidéo et du document pour assurer la continuité de l'enregistrement.
+ * [Module 4 Étape 4.1 - Modularization]
+ * Monitors video and window events to ensure recording continuity.
  */
 function monitorVideoState() {
     if (!videoElement) {
@@ -578,73 +589,94 @@ function monitorVideoState() {
 }
 
 /**
- * --- Fonctions Exportées pour le Background Script ---
- * Ces fonctions sont appelées par le background via chrome.scripting.executeScript.
+ * [Module 4 Étape 4.1 - Modularization & Export for Background Script]
+ * --- Functions Exported for Background Script ---
+ * These functions are called by the background script using chrome.scripting.executeScript.
  */
 
 /**
- * Démarre l'enregistrement dans le content script, appelé depuis le background.
- * @param {object} options - Options d'enregistrement passées depuis le background.
+ * [Module 4 Étape 4.1 - Export for Background Script]
+ * Function to start content recording, called from background script.
+ * @param {object} options - Recording options passed from background script.
  */
 function contentStartRecording(options) {
-    // Si un enregistrement est déjà en cours dans cet onglet, on ne fait rien.
-    if (isRecording) {
-        console.warn("Un enregistrement est déjà en cours dans ce content script.");
-        return;
-    }
-    console.log("contentStartRecording appelée avec les options:", options);
-    // 1. Configure les variables globales à partir des options
-    videoSelector = options.videoSelector;
-    SEGMENT_DURATION = options.segmentDuration;
-    RECORD_DURATION = options.recordDuration;
-    ENABLE_SEND_LOCAL = options.enableSendLocal;
-    ENABLE_SEND_SEGMENT_LOCAL = options.enableSendSegmentLocal;
-    ENABLE_SEND_TELEGRAM = options.enableTelegramSave;
-    ENABLE_SEND_SEGMENT_TELEGRAM = options.enableSegmentTelegram;
-    LOCAL_SERVER_URL = options.localServerUrl;
-    TELEGRAM_BOT_TOKEN = options.telegramBotToken;
-    TELEGRAM_CHAT_ID = options.telegramChatId;
-
-    // 2. Démarrage du processus d'enregistrement
-    videoElement = findVideoElement();
-    if (!videoElement) {
-        console.error("Élément vidéo non trouvé avec le sélecteur :", videoSelector);
-        return;
-    }
-    // Démarre la lecture de la vidéo pour permettre la capture
-    videoElement.play().catch(err => console.error("Impossible de démarrer la vidéo au lancement :", err));
-    if (!videoElement.paused) {
-        startRecordingFunction();
-    } else {
-        videoElement.addEventListener("playing", function onPlayingMain() {
-            if (!isRecording) startRecordingFunction();
-            videoElement.removeEventListener("playing", onPlayingMain);
+    try {
+        console.log("contentStartRecording CALLED"); // <-- Log très simple
+        chrome.runtime.sendMessage({action: "contentRecordingStarted"}, function(response) { // <-- Réponse basique
+            console.log("Response sent from contentStartRecording", response);
         });
+
+        console.log("contentStartRecording appelée avec les options:", options);
+        // 1. Configure global variables using options received from background script
+        videoSelector = options.videoSelector;
+        SEGMENT_DURATION = options.segmentDuration;
+        RECORD_DURATION = options.recordDuration;
+        ENABLE_SEND_LOCAL = options.enableSendLocal;
+        ENABLE_SEND_SEGMENT_LOCAL = options.enableSendSegmentLocal;
+        ENABLE_SEND_TELEGRAM = options.enableTelegramSave;
+        ENABLE_SEND_SEGMENT_TELEGRAM = options.enableSendSegmentTelegram;
+        LOCAL_SERVER_URL = options.localServerUrl;
+        TELEGRAM_BOT_TOKEN = options.telegramBotToken;
+        TELEGRAM_CHAT_ID = options.telegramChatId;
+
+        // 2. Start the recording process
+        videoElement = findVideoElement(); // Find video element based on selector
+        if (!videoElement) {
+            console.error("Élément vidéo non trouvé avec le sélecteur :", videoSelector);
+            return;
+        }
+        videoElement.play().catch(err => console.error("Impossible de démarrer la vidéo au lancement :", err));
+        if (!videoElement.paused) {
+            startRecordingFunction();
+        } else {
+            videoElement.addEventListener("playing", function onPlayingMain() {
+                if (!isRecording) startRecordingFunction();
+                videoElement.removeEventListener("playing", onPlayingMain);
+            });
+        }
+        monitorVideoState();
+        setTimeout(() => {
+            stopRecordingFunction();
+        }, RECORD_DURATION);
+    } catch (error) {
+        console.error("Erreur dans contentStartRecording:", error);
+        // Vous pourriez éventuellement envoyer un message d'erreur au background script ici
     }
-    monitorVideoState();
-    // Arrête l'enregistrement après RECORD_DURATION
-    setTimeout(() => {
-        stopRecordingFunction();
-    }, RECORD_DURATION);
 }
 
 /**
- * Arrête l'enregistrement dans le content script, appelé depuis le background.
+ * [Module 4 Étape 4.1 - Export for Background Script]
+ * Function to stop content recording, called from background script.
  */
 function contentStopRecording() {
     console.log("contentStopRecording appelée");
     stopRecordingFunction();
 }
 
-// --- Écouteur de messages dans content.js ---
+
+// --- Message Listener in content.js ---
 chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
-    console.log("Message reçu dans content.js :", message, sender);
+    console.log("Message reçu dans le script de contenu content.js:", message, sender);
+
     if (message.action === "contentStartRecording") {
-        contentStartRecording(message.options);
+        // Call the internal start recording function (already configured options via contentStartRecording)
+        contentStartRecording(message.options); // Forward options again just to be sure, although options are already set globally in contentStartRecording
+
     } else if (message.action === "contentStopRecording") {
+        // Call the internal stop recording function
         contentStopRecording();
+
     }
+    // No response needed for these actions in this example
     return false;
 });
 
-console.log("Script de contenu content.js chargé.");
+
+// Lors du démarrage
+//chrome.runtime.sendMessage({ action: "contentRecordingStarted" });
+
+// Lors de l'arrêt
+//chrome.runtime.sendMessage({ action: "contentRecordingStopped" });
+
+
+console.log("Script de contenu content.js chargé."); // Confirmation message when content script loads.

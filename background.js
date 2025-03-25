@@ -1,38 +1,35 @@
 /* background.js */
 
-// --- Variable globale pour stocker les options d'enregistrement ---
-let currentRecordingOptions = null;
-let isRecording = false; // Etat global de l'enregistrement
-
-// Sauvegarder l'état dans chrome.storage.local pour le rendre persistant
-function updateRecordingState(state) {
-    isRecording = state;
-    chrome.storage.local.set({ isRecording: state });
-}
+// Dictionnaires pour stocker l'état et les options d'enregistrement par onglet
+const recordingStates = {};  // { [tabId]: boolean }
+const recordingOptions = {}; // { [tabId]: options }
 
 /**
- * Envoie un message au script de contenu pour démarrer l'enregistrement.
+ * Envoie un message au content script de l'onglet spécifié pour démarrer l'enregistrement.
+ * @param {number} tabId - L'identifiant de l'onglet.
+ * @param {object} options - Les options d'enregistrement.
  */
 function startContentRecording(tabId, options) {
     chrome.tabs.sendMessage(tabId, { action: "contentStartRecording", options: options })
         .then(response => {
-            console.log("Message de démarrage envoyé au content script:", response);
+            console.log("Message de démarrage envoyé au content script pour l'onglet", tabId, ":", response);
         })
         .catch(error => {
-            console.error("Erreur lors de l'envoi du message à content.js:", error);
+            console.error("Erreur lors de l'envoi du message à content.js pour l'onglet", tabId, ":", error);
         });
 }
 
 /**
- * Envoie un message au script de contenu pour arrêter l'enregistrement.
+ * Envoie un message au content script de l'onglet spécifié pour arrêter l'enregistrement.
+ * @param {number} tabId - L'identifiant de l'onglet.
  */
 function stopContentRecording(tabId) {
     chrome.tabs.sendMessage(tabId, { action: "contentStopRecording" })
         .then(response => {
-            console.log("Message d'arrêt envoyé au content script:", response);
+            console.log("Message d'arrêt envoyé au content script pour l'onglet", tabId, ":", response);
         })
         .catch(error => {
-            console.error("Erreur lors de l'envoi du message à content.js:", error);
+            console.error("Erreur lors de l'envoi du message à content.js pour l'onglet", tabId, ":", error);
         });
 }
 
@@ -40,65 +37,76 @@ function stopContentRecording(tabId) {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log("Message reçu dans background.js :", message, sender);
 
-    // Mise à jour de l'état d'enregistrement depuis content.js
+    // Récupérer l'ID de l'onglet si disponible
+    const tabId = sender.tab ? sender.tab.id : null;
+
+    // Mise à jour de l'état d'enregistrement depuis le content script
     if (message.action === "contentRecordingStarted") {
-        console.log("Enregistrement démarré dans le content script.");
-        isRecording = true;
-        updateRecordingState(isRecording);
-        sendResponse({ status: "recordingStarted" });
+        if (tabId !== null) {
+            console.log("Enregistrement démarré dans le content script pour l'onglet", tabId);
+            recordingStates[tabId] = true;
+            sendResponse({ status: "recordingStarted" });
+        }
         return true;
     }
 
     if (message.action === "contentRecordingStopped") {
-        console.log("Enregistrement arrêté dans le content script.");
-        isRecording = false;
-        updateRecordingState(isRecording);
-        sendResponse({ status: "recordingStopped" });
+        if (tabId !== null) {
+            console.log("Enregistrement arrêté dans le content script pour l'onglet", tabId);
+            recordingStates[tabId] = false;
+            sendResponse({ status: "recordingStopped" });
+        }
         return true;
     }
 
-    // Permettre au popup de récupérer l'état d'enregistrement actuel
+    // Permettre au popup de récupérer l'état d'enregistrement de l'onglet actif
     if (message.action === "getRecordingState") {
-        chrome.storage.local.get("isRecording", (result) => {
-            sendResponse({ isRecording: result.isRecording || false });
-            isRecording = result.isRecording || false; // Mettre à jour l'état global
-            console.log("isRecording:", isRecording);
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs.length) {
+                const activeTabId = tabs[0].id;
+                sendResponse({ isRecording: !!recordingStates[activeTabId] });
+                console.log("État d'enregistrement pour l'onglet", activeTabId, ":", !!recordingStates[activeTabId]);
+            } else {
+                sendResponse({ isRecording: false });
+            }
         });
         return true; // Réponse asynchrone
     }
 
+    // Démarrage de l'enregistrement
     if (message.action === "startRecording") {
-        currentRecordingOptions = message.options; // Stocker les options
-
+        // Si le message provient d'un content script ou du popup, on récupère l'onglet actif
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             if (tabs.length === 0) {
                 console.warn("Aucun onglet actif trouvé.");
                 sendResponse({ status: "noActiveTab" });
                 return;
             }
-
-            startContentRecording(tabs[0].id, currentRecordingOptions);
-            // On attend la confirmation du content script via message "contentRecordingStarted"
+            const activeTabId = tabs[0].id;
+            // Stocker les options pour cet onglet
+            recordingOptions[activeTabId] = message.options;
+            startContentRecording(activeTabId, message.options);
+            // L'état sera mis à jour par le content script via "contentRecordingStarted"
             sendResponse({ status: "starting" });
         });
         return true; // Réponse asynchrone
 
     } else if (message.action === "stopRecording") {
-        // Ici, on peut arrêter l'enregistrement même si le popup est fermé en se basant sur l'état global.
+        // Arrêter l'enregistrement dans l'onglet actif
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             if (tabs.length === 0) {
                 console.warn("Aucun onglet actif trouvé.");
                 sendResponse({ status: "noActiveTab" });
                 return;
             }
-            console.log("Arrêt de l'enregistrement en cours...", tabs[0].id, isRecording);
-            // Si l'enregistrement est en cours, on envoie la commande d'arrêt
-            if (isRecording) {
-                stopContentRecording(tabs[0].id);
-                // Le content script mettra à jour l'état via "contentRecordingStopped"
+            const activeTabId = tabs[0].id;
+            console.log("Demande d'arrêt de l'enregistrement pour l'onglet", activeTabId, ":", !!recordingStates[activeTabId]);
+            if (recordingStates[activeTabId]) {
+                stopContentRecording(activeTabId);
+                // L'état sera mis à jour par le content script via "contentRecordingStopped"
                 sendResponse({ status: "stopping" });
             } else {
-                console.log("Aucun enregistrement en cours à arrêter.");
+                console.log("Aucun enregistrement en cours à arrêter pour l'onglet", activeTabId);
                 sendResponse({ status: "notRecording" });
             }
         });

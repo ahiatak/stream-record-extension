@@ -70,7 +70,7 @@ popupStartStopButton.addEventListener("click", function () {
             popupStatus.textContent = "Enregistrement arrêté.";
         } else {
             console.log("Démarrage de l'enregistrement...");
-            startRecording();
+            sendEventToStartRecording();
         }
     });
 });
@@ -78,7 +78,7 @@ popupStartStopButton.addEventListener("click", function () {
 /**
  * Démarre l'enregistrement avec les options du popup.
  */
-function startRecording() {
+function sendEventToStartRecording() {
     const options = {
         videoSelector: popupVideoSelectorInput.value,
         segmentDuration: parseInt(popupSegmentDurationInput.value, 10) * 60 * 1000, // minutes -> millisecondes
@@ -108,7 +108,7 @@ function startRecording() {
 // Boutons individuels pour démarrer et arrêter l'enregistrement
 popupStartButton.addEventListener("click", function () {
     console.log("Bouton Démarrer cliqué.");
-    startRecording();
+    sendEventToStartRecording();
 });
 
 popupStopButton.addEventListener("click", function () {
@@ -171,6 +171,7 @@ function savePopupOptions() {
 document.addEventListener("DOMContentLoaded", function () {
     loadPopupOptions();
     sendMessageToActiveTab("getRecordingState", null, function (response) {
+        console.log("getRecordingState");
         updateButtonText(response && response.isRecording);
     });
 });

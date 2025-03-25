@@ -20,6 +20,10 @@ body {
     padding: 15px; /* Slightly more padding */
 }
 
+.mt-3 {
+    margin-top: 30px; /* More margin top */
+}
+
 .popup-container {
     display: flex;
     flex-direction: column;

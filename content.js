@@ -341,6 +341,7 @@ async function startRecordingFunction() {
         mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm; codecs=vp9" });
         isRecording = true;
         console.log("Enregistrement démarré...");
+        chrome.runtime.sendMessage({ action: "contentRecordingStarted" });
 
         mediaRecorder.ondataavailable = async (event) => {
             if (event.data && event.data.size > 0) {
@@ -481,6 +482,7 @@ async function stopRecordingFunction() {
             isRecording = false;
         } finally {
             isRecording = false;
+            chrome.runtime.sendMessage({ action: "contentRecordingStopped" });
         }
     } else {
         console.warn("stopRecording appelé alors qu'aucun enregistrement n'est en cours ou MediaRecorder non initialisé.");
@@ -669,6 +671,12 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     return false;
 });
 
+
+// Lors du démarrage
+//chrome.runtime.sendMessage({ action: "contentRecordingStarted" });
+
+// Lors de l'arrêt
+//chrome.runtime.sendMessage({ action: "contentRecordingStopped" });
 
 
 console.log("Script de contenu content.js chargé."); // Confirmation message when content script loads.

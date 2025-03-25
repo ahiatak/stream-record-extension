@@ -2,57 +2,13 @@
 
 // --- Variable globale pour stocker les options d'enregistrement ---
 let currentRecordingOptions = null;
+let isRecording = false; // Etat global de l'enregistrement
 
-// --- Global Recording State Management in Background Script ---
-let isBackgroundRecordingActive = false; // Track if recording is active globally in background
-let activeRecordingTabId = null;       // Track the tab ID where recording is active (if needed)
-
-
-/**
- * Function to set and persist the background recording state.
- * @param {boolean} recordingState - The new recording state (true for active, false for inactive).
- * @param {number|null} tabId - The tab ID where recording is active, or null if inactive.
- */
-function setBackgroundRecordingState(recordingState, tabId) {
-    isBackgroundRecordingActive = recordingState;
-    activeRecordingTabId = tabId;
-    chrome.storage.sync.set({ // Persist recording state in storage
-        backgroundIsRecordingActive: isBackgroundRecordingActive,
-        backgroundRecordingTabId: activeRecordingTabId
-    }, function() {
-        console.log('État de l\'enregistrement en background sauvegardé:', isBackgroundRecordingActive, activeRecordingTabId);
-    });
-    updatePopupUI(); // Update popup UI to reflect state change
+// Sauvegarder l'état dans chrome.storage.local pour le rendre persistant
+function updateRecordingState(state) {
+    isRecording = state;
+    chrome.storage.local.set({ isRecording: state });
 }
-
-
-/**
- * Function to get the persisted background recording state from storage and initialize background state.
- */
-function loadBackgroundRecordingState() {
-    chrome.storage.sync.get({
-        backgroundIsRecordingActive: false,
-        backgroundRecordingTabId: null
-    }, function(items) {
-        isBackgroundRecordingActive = items.backgroundIsRecordingActive;
-        activeRecordingTabId = items.backgroundRecordingTabId;
-        console.log('État de l\'enregistrement en background chargé depuis le storage:', isBackgroundRecordingActive, activeRecordingTabId);
-        updatePopupUI(); // Update popup UI on load to reflect persisted state
-    });
-}
-
-
-/**
- * Function to update the popup UI to reflect the current background recording state.
- * Sends a message to all connected popups to update their button text and status.
- */
-function updatePopupUI() {
-    chrome.runtime.getViews({type: "popup"}).forEach(popup => {
-        popup.updatePopupDisplay(isBackgroundRecordingActive); // Call function in popup.js to update UI
-    });
-}
-
-
 
 /**
  * Envoie un message au script de contenu pour démarrer l'enregistrement.
@@ -82,10 +38,37 @@ function stopContentRecording(tabId) {
 
 // --- Gestion des messages reçus dans le background ---
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log("Message reçu dans background.js :", message);
+    console.log("Message reçu dans background.js :", message, sender);
+
+    // Mise à jour de l'état d'enregistrement depuis content.js
+    if (message.action === "contentRecordingStarted") {
+        console.log("Enregistrement démarré dans le content script.");
+        isRecording = true;
+        updateRecordingState(isRecording);
+        sendResponse({ status: "recordingStarted" });
+        return true;
+    }
+
+    if (message.action === "contentRecordingStopped") {
+        console.log("Enregistrement arrêté dans le content script.");
+        isRecording = false;
+        updateRecordingState(isRecording);
+        sendResponse({ status: "recordingStopped" });
+        return true;
+    }
+
+    // Permettre au popup de récupérer l'état d'enregistrement actuel
+    if (message.action === "getRecordingState") {
+        chrome.storage.local.get("isRecording", (result) => {
+            sendResponse({ isRecording: result.isRecording || false });
+            isRecording = result.isRecording || false; // Mettre à jour l'état global
+            console.log("isRecording:", isRecording);
+        });
+        return true; // Réponse asynchrone
+    }
 
     if (message.action === "startRecording") {
-        currentRecordingOptions = message.options;
+        currentRecordingOptions = message.options; // Stocker les options
 
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             if (tabs.length === 0) {
@@ -95,43 +78,32 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             }
 
             startContentRecording(tabs[0].id, currentRecordingOptions);
+            // On attend la confirmation du content script via message "contentRecordingStarted"
             sendResponse({ status: "starting" });
         });
-
-        return true;  // Indique une réponse asynchrone
+        return true; // Réponse asynchrone
 
     } else if (message.action === "stopRecording") {
+        // Ici, on peut arrêter l'enregistrement même si le popup est fermé en se basant sur l'état global.
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             if (tabs.length === 0) {
                 console.warn("Aucun onglet actif trouvé.");
                 sendResponse({ status: "noActiveTab" });
                 return;
             }
-
-            stopContentRecording(tabs[0].id);
-            sendResponse({ status: "stopping" });
+            console.log("Arrêt de l'enregistrement en cours...", tabs[0].id, isRecording);
+            // Si l'enregistrement est en cours, on envoie la commande d'arrêt
+            if (isRecording) {
+                stopContentRecording(tabs[0].id);
+                // Le content script mettra à jour l'état via "contentRecordingStopped"
+                sendResponse({ status: "stopping" });
+            } else {
+                console.log("Aucun enregistrement en cours à arrêter.");
+                sendResponse({ status: "notRecording" });
+            }
         });
-
-        return true;  // Indique une réponse asynchrone
-
-    } else if (message.action === "contentRecordingStarted") {
-        console.log("Le content script a confirmé le démarrage.");
-        sendResponse({ status: "received" });
         return true;
     }
 
-    return false;
-});
-
-
-
-// --- Extension Startup Logic ---
-chrome.runtime.onStartup.addListener(() => {
-    loadBackgroundRecordingState(); // Load persisted state on extension startup
-    console.log("Extension démarrée, logique de fond initialisée.");
-});
-
-chrome.runtime.onInstalled.addListener(() => { // Also load on install/update
-    loadBackgroundRecordingState();
-    console.log("Extension installée ou mise à jour, logique de fond initialisée.");
+    return false; // Aucun sendResponse pour les autres messages
 });

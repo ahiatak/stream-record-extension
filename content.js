@@ -2,8 +2,8 @@
 
 // --- Global variables (configurables via options) ---
 let videoSelector = 'video'; // Sélecteur vidéo par défaut, modifiable via options
-let SEGMENT_DURATION = 5 * 60 * 1000; // 5 minutes par segment (par défaut), en millisecondes
-let RECORD_DURATION = 5 * 60 * 60 * 1000; // 5 heures d'enregistrement total (par défaut), en millisecondes
+let SEGMENT_DURATION = 5 * 60 * 1000; // 5 minutes par segment, en millisecondes
+let RECORD_DURATION = 5 * 60 * 60 * 1000; // 5 heures d'enregistrement total, en millisecondes
 let ENABLE_SEND_LOCAL = false; // Par défaut, modifiable via options
 let ENABLE_SEND_SEGMENT_LOCAL = false;
 let ENABLE_SEND_TELEGRAM = false;
@@ -317,7 +317,7 @@ async function startRecordingFunction() {
         return;
     }
 
-    // Si un enregistrement est déjà en cours, on ne redémarre pas
+    // Si un enregistrement est déjà en cours, ne pas redémarrer
     if (isRecording) {
         console.warn("Un enregistrement est déjà en cours dans cet onglet.");
         return;
@@ -332,7 +332,7 @@ async function startRecordingFunction() {
         mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm; codecs=vp9" });
         isRecording = true;
         console.log("Enregistrement démarré...");
-        // Envoi du signal de démarrage après création du MediaRecorder
+        // Informer le background (si besoin) que l'enregistrement a démarré
         chrome.runtime.sendMessage({ action: "contentRecordingStarted" });
 
         mediaRecorder.ondataavailable = async (event) => {
@@ -421,13 +421,11 @@ async function startRecordingFunction() {
                     }
                 }
             } else {
-                // Si l'arrêt n'était pas prévu, on redémarre l'enregistrement
                 if (!expectedStop) {
                     console.warn("Enregistrement arrêté de manière inattendue, redémarrage...");
                     restartRecordingFunction();
                 }
             }
-            // On informe le background de l'arrêt
             chrome.runtime.sendMessage({ action: "contentRecordingStopped" });
         };
 
@@ -474,7 +472,6 @@ async function stopRecordingFunction() {
             isRecording = false;
         } finally {
             isRecording = false;
-            // Le message "contentRecordingStopped" sera envoyé dans onstop
         }
     } else {
         console.warn("stopRecording appelé alors qu'aucun enregistrement n'est en cours ou MediaRecorder non initialisé.");
@@ -555,8 +552,8 @@ function monitorVideoState() {
         console.warn("Vidéo terminée. L'enregistrement continue si le flux est actif...");
     });
     videoElement.addEventListener("stalled", () => {
-        console.warn("Problème de connexion détecté. Tentative de reprise de la lecture vidéo...");
-        videoElement.play().catch((err) => console.error("Impossible de relancer la vidéo après un 'stalled' :", err));
+        console.warn("Problème de connexion détecté. Tentative de reprise de la lecture...");
+        videoElement.play().catch((err) => console.error("Erreur lors de la reprise après 'stalled' :", err));
     });
     videoElement.addEventListener("playing", function onPlayingMonitor() {
         if (!isRecording) {
@@ -567,7 +564,7 @@ function monitorVideoState() {
     });
     document.addEventListener("visibilitychange", () => {
         if (!document.hidden && !isRecording && !videoElement.paused) {
-            console.log("Onglet visible et vidéo en lecture. Vérification de l'enregistrement depuis visibilitychange...");
+            console.log("Onglet visible et vidéo en lecture. Vérification de l'enregistrement...");
             startRecordingFunction();
         }
     });
@@ -578,40 +575,29 @@ function monitorVideoState() {
 }
 
 /**
- * --- Fonctions Exportées pour le Background Script ---
- * Ces fonctions sont appelées par le background via chrome.scripting.executeScript.
- */
-
-/**
  * Démarre l'enregistrement dans le content script, appelé depuis le background.
  * @param {object} options - Options d'enregistrement passées depuis le background.
  */
 function contentStartRecording(options) {
-    // Si un enregistrement est déjà en cours dans cet onglet, on ne fait rien.
-    if (isRecording) {
-        console.warn("Un enregistrement est déjà en cours dans ce content script.");
-        return;
-    }
     console.log("contentStartRecording appelée avec les options:", options);
-    // 1. Configure les variables globales à partir des options
+    // Configurer les variables globales avec les options reçues
     videoSelector = options.videoSelector;
     SEGMENT_DURATION = options.segmentDuration;
     RECORD_DURATION = options.recordDuration;
     ENABLE_SEND_LOCAL = options.enableSendLocal;
-    ENABLE_SEND_SEGMENT_LOCAL = options.enableSendSegmentLocal;
+    ENABLE_SEND_SEGMENT_LOCAL = options.enableSegmentLocal;
     ENABLE_SEND_TELEGRAM = options.enableTelegramSave;
     ENABLE_SEND_SEGMENT_TELEGRAM = options.enableSegmentTelegram;
     LOCAL_SERVER_URL = options.localServerUrl;
     TELEGRAM_BOT_TOKEN = options.telegramBotToken;
     TELEGRAM_CHAT_ID = options.telegramChatId;
 
-    // 2. Démarrage du processus d'enregistrement
+    // Recherche l'élément vidéo et tente de le démarrer pour la capture
     videoElement = findVideoElement();
     if (!videoElement) {
         console.error("Élément vidéo non trouvé avec le sélecteur :", videoSelector);
         return;
     }
-    // Démarre la lecture de la vidéo pour permettre la capture
     videoElement.play().catch(err => console.error("Impossible de démarrer la vidéo au lancement :", err));
     if (!videoElement.paused) {
         startRecordingFunction();
@@ -622,9 +608,10 @@ function contentStartRecording(options) {
         });
     }
     monitorVideoState();
-    // Arrête l'enregistrement après RECORD_DURATION
+
+    // Arrêter l'enregistrement après RECORD_DURATION
     setTimeout(() => {
-        stopRecordingFunction();
+        contentStopRecording();
     }, RECORD_DURATION);
 }
 
@@ -641,9 +628,17 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     console.log("Message reçu dans content.js :", message, sender);
     if (message.action === "contentStartRecording") {
         contentStartRecording(message.options);
+        sendResponse({ success: true, isRecording });
     } else if (message.action === "contentStopRecording") {
         contentStopRecording();
+        sendResponse({ success: true, isRecording });
+    } else if (message.action === "getRecordingState") {
+        sendResponse({ isRecording });
+    } else {
+        // Pour toute action non reconnue, on renvoie une réponse vide
+        sendResponse({});
     }
+    // Comme aucune opération asynchrone n'est attendue ici, retourner false
     return false;
 });
 
